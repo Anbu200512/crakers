@@ -1,0 +1,49 @@
+{
+  "name": "anish-enterprises",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Anish Enterprises - Crackers Shop. Frontend-only React storefront served by Vite; enquiries are saved locally and sent to the shop as a PDF over WhatsApp.",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "start": "vite preview",
+    "build": "vite build",
+    "serve:prod": "vite preview",
+    "predev": "node scripts/image-manifest.mjs",
+    "prebuild": "node scripts/image-manifest.mjs",
+    "lint": "eslint src/frontend --ext js,jsx",
+    "typecheck": "tsc -p jsconfig.json",
+    "test": "npm run test:frontend",
+    "test:frontend": "node --import ./scripts/register-loader.mjs scripts/smoke-catalog.mjs && node --import ./scripts/register-loader.mjs scripts/smoke-whatsapp.mjs",
+    "test:catalog": "node --import ./scripts/register-loader.mjs scripts/smoke-catalog.mjs",
+    "test:whatsapp": "node --import ./scripts/register-loader.mjs scripts/smoke-whatsapp.mjs",
+    "check:imports": "node scripts/check-imports.mjs",
+    "check:images": "node scripts/image-render-check.mjs",
+    "check:theme": "node scripts/theme-check.mjs && node scripts/contrast-audit.mjs && node scripts/light-surface.mjs && node scripts/encoding-check.mjs",
+    "manifest": "node scripts/image-manifest.mjs",
+    "verify": "npm run check:imports && npm run lint && npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "jspdf": "^4.2.1",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}
