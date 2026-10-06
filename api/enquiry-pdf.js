@@ -57,10 +57,11 @@ export default async function handler(req, res) {
     });
     res.status(200).json({ url: blob.url });
   } catch (error) {
-    // Logged for the full message; the response carries the error class only -
-    // enough to tell a bad token from a store problem without exposing
-    // internals. The caller still reads any failure as "download instead".
-    const reason = error?.name || 'Error';
+    // BlobError subclasses do not override .name (it stays "Error"), so the
+    // class name is what tells a bad token (BlobAccessError) apart from a
+    // suspended or missing store. Only the class leaves the server; the full
+    // message goes to the function logs.
+    const reason = error?.constructor?.name || error?.name || 'Error';
     console.error('[enquiry-pdf] upload failed:', reason, error?.message || error);
     res.status(502).json({ error: 'the upload could not be stored', reason });
   }
