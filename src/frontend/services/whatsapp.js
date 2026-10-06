@@ -5,14 +5,21 @@ import { buildEnquiryPdf, enquiryPdfFileName, pdfMoney } from '../utils/enquiryD
  * Handing an enquiry to WhatsApp.
  *
  * A browser cannot attach a file to a wa.me link - the URL takes text only - so
- * the PDF reaches the shop one of two ways. On a phone the system share sheet
- * carries the file: the customer taps WhatsApp, then the shop, and the PDF
- * arrives in that chat alongside the message. Everywhere else the shop's chat
- * opens on the published number with the message pre-typed while the PDF
- * downloads beside it for a paperclip attach.
+ * the PDF reaches the shop in one of three ways, in this order:
+ *   1. Phone: the system share sheet carries the file, so the PDF lands in the
+ *      chat the customer picks.
+ *   2. Computer: the PDF is uploaded once (api/enquiry-pdf.js, Vercel Blob) and
+ *      the chat opens with its link in the message - nothing to attach.
+ *   3. No server reachable: the chat opens anyway and the PDF downloads beside
+ *      it for a paperclip attach.
  */
 
 const MAX_TEXT = 1800;
+const PDF_UPLOAD_ENDPOINT = '/api/enquiry-pdf';
+const UPLOAD_TIMEOUT_MS = 8000;
+
+/** The link rides in the message itself, since only text fits in a wa.me URL. */
+export const withPdfLink = (message, url) => (url ? `${message}\n\nPDF: ${url}` : message);
 
 /** The prefilled chat message: the whole enquiry in readable, scannable form. */
 export const enquiryMessageText = (enquiry) => {
@@ -84,6 +91,39 @@ const openChat = (href) => {
 };
 
 /**
+ * Uploads the PDF and returns its public URL, or null when the server is not
+ * reachable (local dev without `vercel dev`, upload blocked, Blob store not
+ * linked yet). The caller treats null as "fall back to downloading the file".
+ */
+export const uploadEnquiryPdf = async (blob, fileName) => {
+  if (!blob || typeof fetch !== 'function') return null;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS) : null;
+  try {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    // 32k windows keep the spread inside any engine's argument limit.
+    for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+    }
+    const response = await fetch(PDF_UPLOAD_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      signal: controller ? controller.signal : undefined,
+      body: JSON.stringify({ name: fileName, data: btoa(binary) }),
+    });
+    if (!response.ok) return null;
+    const payload = await response.json().catch(() => null);
+    const url = payload && typeof payload.url === 'string' ? payload.url : '';
+    return /^https:\/\//.test(url) ? url : null;
+  } catch {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+
+/**
  * Hands the PDF to the phone's share sheet, which is the only way a file can
  * reach WhatsApp from a web page. Resolves true when the sheet accepted it; a
  * cancel, a failure or a browser without file sharing all resolve false so the
@@ -108,17 +148,16 @@ const shareEnquiryPdf = async (enquiry, blob, fileName, message) => {
 };
 
 /**
- * Sends the enquiry: the share sheet first where it exists, otherwise the
- * shop's chat opens on the published number and the PDF downloads beside it.
+ * Sends the enquiry: the phone's share sheet first, then the uploaded PDF as a
+ * link in the message, and as a last resort the PDF downloaded beside the chat.
  *
- * Returns 'shared' (the sheet took the PDF), 'opened' (chat open, PDF
- * downloaded), 'downloaded' (PDF saved, no WhatsApp link configured) or
- * 'failed', so the caller can report what actually happened.
+ * Returns 'shared' (the sheet took the PDF), 'linked' (chat open with the PDF
+ * link in the message), 'opened' (chat open, PDF downloaded), 'downloaded'
+ * (PDF saved, no WhatsApp link configured) or 'failed'.
  */
 export const sendEnquiryToWhatsApp = async (enquiry, siteContent = {}) => {
   const contact = siteContent.contact || {};
   const message = enquiryMessageText(enquiry);
-  const chatHref = whatsappChatHref(socialLinkFor('whatsapp', siteContent.social?.whatsapp), message);
   const fileName = enquiryPdfFileName(enquiry);
 
   let blob = null;
@@ -129,13 +168,22 @@ export const sendEnquiryToWhatsApp = async (enquiry, siteContent = {}) => {
     // still sends a complete enquiry even without the document.
   }
 
+  // 1. A phone hands the file straight to WhatsApp through the share sheet.
   if (blob && (await shareEnquiryPdf(enquiry, blob, fileName, message))) return 'shared';
 
-  // Fallback - and the whole story on a computer. The chat opens first so that
-  // landing on the published number is never held up by the download.
+  // 2. Otherwise the PDF goes up once and the chat opens with its link in the
+  //    message - the desktop path, and the fallback when the sheet is refused.
+  const pdfUrl = blob ? await uploadEnquiryPdf(blob, fileName) : null;
+  const chatHref = whatsappChatHref(
+    socialLinkFor('whatsapp', siteContent.social?.whatsapp),
+    withPdfLink(message, pdfUrl),
+  );
   const opened = chatHref ? openChat(chatHref) : false;
+
+  // 3. No server reachable: the PDF downloads beside the open chat so the
+  //    customer can attach it with the paperclip instead.
   let downloaded = false;
-  if (blob) {
+  if (blob && !pdfUrl) {
     try {
       downloaded = downloadBlob(blob, fileName);
     } catch {
@@ -143,6 +191,6 @@ export const sendEnquiryToWhatsApp = async (enquiry, siteContent = {}) => {
     }
   }
 
-  if (opened) return 'opened';
+  if (opened) return pdfUrl ? 'linked' : 'opened';
   return downloaded ? 'downloaded' : 'failed';
 };

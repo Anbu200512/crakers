@@ -28,6 +28,7 @@
     "verify": "npm run check:imports && npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",

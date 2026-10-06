@@ -77,7 +77,7 @@ export function EnquiryFormPage() {
           <div className="rounded-2xl border border-marigold/25 bg-secondarySoft p-4">
             <div className="flex gap-3">
               <ShieldCheck className="mt-0.5 shrink-0 text-goldInk" size={18} />
-              <p className="text-xs leading-5 text-stone-600">Sending hands your enquiry straight to us on WhatsApp: on a phone the share sheet carries the PDF, on a computer the shop chat opens with your message and the PDF downloads. No order or payment is created on this page.</p>
+              <p className="text-xs leading-5 text-stone-600">Sending hands your enquiry straight to us on WhatsApp: on a phone the share sheet carries the PDF, on a computer the chat opens with your message and a link to the PDF. No order or payment is created on this page.</p>
             </div>
           </div>
 
@@ -122,7 +122,7 @@ export function EnquiryFormPage() {
               {isSubmitting ? 'Opening WhatsApp...' : 'Send enquiry'} <Send size={15} />
             </button>
             <p className="mt-3 max-w-md text-xs leading-5 text-stone-500">
-              On a phone the share sheet opens with the PDF attached - tap WhatsApp, then our shop, and it is sent. On a computer the shop's chat opens with your message and the PDF downloads beside it.
+              On a phone the share sheet opens with the PDF attached - tap WhatsApp, then our shop, and it is sent. On a computer the shop's chat opens with your message and a link to the PDF, ready to send.
             </p>
           </div>
         </form>
@@ -168,7 +168,7 @@ function EnquirySummary({ items, itemCount, indicativeTotal, contact }) {
               <p className="truncate text-xs font-bold text-charcoal">{item.name}</p>
               <p className="mt-1 text-[0.65rem] text-charcoal/75">Qty {item.quantity} Â· {item.packSize}</p>
             </div>
-            <p className="text-xs font-bold text-charcoal">{formatCurrency(item.customerPrice * item.quantity)}</p>
+            <p className="text-xs font-bold text-charcoal">{formatCurrency((item.price ?? item.customerPrice ?? 0) * item.quantity)}</p>
           </div>
         ))}
       </div>

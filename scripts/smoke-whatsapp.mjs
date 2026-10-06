@@ -38,6 +38,18 @@ globalThis.document = {
   },
   body: { appendChild() {} },
 };
+
+// The upload endpoint is stubbed offline by default so the download fallback is
+// exercised the way a visitor without a reachable server experiences it. The
+// link path swaps fetchBehaviour for a successful store response.
+const fetchCalls = [];
+let fetchBehaviour = async () => {
+  throw new Error('no server reachable');
+};
+globalThis.fetch = (url, init) => {
+  fetchCalls.push({ url, init });
+  return fetchBehaviour(url, init);
+};
 if (typeof URL.createObjectURL !== 'function') URL.createObjectURL = () => 'blob:stub';
 if (typeof URL.revokeObjectURL !== 'function') URL.revokeObjectURL = () => {};
 
@@ -68,8 +80,9 @@ const enquiry = await submitEnquiry({
   notes: 'Deliver after 6pm',
   indicativeTotal: 6340,
   items: [
-    { id: 'flower-pots-big', name: 'Flower Pots (Big)', category: 'Flower Pots', packSize: '1 Box', quantity: 10, customerPrice: 450 },
-    { id: 'rocket-10', name: '10 Shot Rockets', category: 'Rockets', packSize: '1 Pack', quantity: 2, customerPrice: 920 },
+    // Cart rows carry `price`, not `customerPrice` - the shape the real cart hands over.
+    { id: 'flower-pots-big', name: 'Flower Pots (Big)', category: 'Flower Pots', packSize: '1 Box', quantity: 10, price: 450 },
+    { id: 'rocket-10', name: '10 Shot Rockets', category: 'Rockets', packSize: '1 Pack', quantity: 2, price: 920 },
   ],
 });
 
@@ -94,6 +107,7 @@ check('the submitted enquiry is recorded locally with a reference', () => {
   const stored = JSON.parse(localStorageStub.getItem(enquirySubmissionStorageKey));
   assert.equal(stored[0].reference, enquiry.reference);
   assert.equal(stored[0].items.length, 2);
+  assert.equal(stored[0].items[0].customerPrice, 450, 'the cart price survives into the enquiry the PDF draws');
 });
 
 check('the chat message lists the customer, the items and the total', () => {
@@ -120,20 +134,23 @@ check('the enquiry PDF is a real PDF file', () => {
   assert.match(enquiryPdfFileName(enquiry), /^Enquiry-ENQ-[A-Z0-9]+-\d{4}-\d{2}-\d{2}\.pdf$/);
 });
 
+// With no server reachable the upload fails fast, so the chat still opens on
+// the published number and the PDF downloads beside it to attach by hand.
+fetchCalls.length = 0;
 clickedAnchors.length = 0;
 try {
   const outcome = await sendEnquiryToWhatsApp(enquiry, siteContent.mergeSiteContent(null));
   assert.equal(outcome, 'opened');
-  // The chat is opened first: landing on the shop's number is never held up by the PDF.
-  assert.equal(clickedAnchors[0]?.target, '_blank', 'the chat opens first');
+  assert.equal(fetchCalls[0]?.url, '/api/enquiry-pdf', 'the upload was attempted first');
+  assert.equal(clickedAnchors[0]?.target, '_blank', 'the chat opens');
   assert.ok(clickedAnchors[0].href.startsWith('https://wa.me/916374114513?text='), clickedAnchors[0].href);
   assert.match(decodeURIComponent(clickedAnchors[0].href), /Name: Ravi Kumar/);
   const download = clickedAnchors.find((anchor) => anchor.download);
-  assert.ok(download, 'the PDF was downloaded alongside');
+  assert.ok(download, 'the PDF was downloaded to attach');
   assert.match(download.download, /^Enquiry-ENQ-.+\.pdf$/);
-  results.push('PASS  sending opens the shop chat first and downloads the PDF');
+  results.push('PASS  without a server the chat opens and the PDF downloads');
 } catch (error) {
-  results.push(`FAIL  sending opens the shop chat first and downloads the PDF: ${error.message}`);
+  results.push(`FAIL  without a server the chat opens and the PDF downloads: ${error.message}`);
 }
 
 // The phone path: when the browser offers a share sheet that accepts files, the
@@ -189,6 +206,38 @@ try {
 } finally {
   if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
   else delete globalThis.navigator;
+}
+
+// The computer path: the PDF is uploaded once and the chat opens with its link
+// inside the message - no attachment, nothing left to download.
+fetchCalls.length = 0;
+clickedAnchors.length = 0;
+fetchBehaviour = async () => ({
+  ok: true,
+  json: async () => ({ url: 'https://shop.public.blob.vercel-storage.com/enquiries/1-enquiry.pdf' }),
+});
+try {
+  const outcome = await sendEnquiryToWhatsApp(enquiry, siteContent.mergeSiteContent(null));
+  assert.equal(outcome, 'linked');
+  assert.equal(fetchCalls.length, 1, 'the PDF was uploaded exactly once');
+  assert.equal(fetchCalls[0].url, '/api/enquiry-pdf');
+  assert.equal(fetchCalls[0].init.method, 'POST');
+  const body = JSON.parse(fetchCalls[0].init.body);
+  assert.match(body.name, /^Enquiry-ENQ-.+\.pdf$/);
+  assert.ok(body.data.length > 0, 'the PDF rode along as base64');
+  assert.equal(clickedAnchors.length, 1, 'only the chat opens - nothing to download');
+  assert.equal(clickedAnchors[0].target, '_blank');
+  assert.match(
+    decodeURIComponent(clickedAnchors[0].href),
+    /PDF: https:\/\/shop\.public\.blob\.vercel-storage\.com\/enquiries\/1-enquiry\.pdf/,
+  );
+  results.push('PASS  the chat message carries an uploaded PDF link');
+} catch (error) {
+  results.push(`FAIL  the chat message carries an uploaded PDF link: ${error.message}`);
+} finally {
+  fetchBehaviour = async () => {
+    throw new Error('no server reachable');
+  };
 }
 
 for (const line of results) console.log(line);

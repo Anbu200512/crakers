@@ -23,7 +23,9 @@ const sanitizeEnquiry = (value) => {
           category: String(item.category || ''),
           packSize: String(item.packSize || ''),
           quantity: Number(item.quantity) || 0,
-          customerPrice: Number(item.customerPrice) || 0,
+          // Cart rows carry `price`; older enquiry rows carry `customerPrice`.
+          // Both are normalised here so the PDF always has one field to draw.
+          customerPrice: Number(item.customerPrice ?? item.price) || 0,
         }))
       : [],
     indicativeTotal: Number(value.indicativeTotal) || 0,
