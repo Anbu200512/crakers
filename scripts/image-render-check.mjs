@@ -2,6 +2,7 @@ import { createServer } from 'vite';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { createElement } from 'react';
 
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
@@ -143,7 +144,7 @@ const probeSerial = products.find((product) => !manifest.products[product.id]).s
 const probeId = `excel-${probeSerial}`;
 const probeFile = new URL(`../public/images/products/product ${probeSerial}.jpg`, import.meta.url);
 writeFileSync(probeFile, 'probe');
-const regenerate = () => execFileSync(process.execPath, [new URL('./image-manifest.mjs', import.meta.url).pathname.replace(/^\//, '')], { stdio: 'ignore' });
+const regenerate = () => execFileSync(process.execPath, [fileURLToPath(new URL('./image-manifest.mjs', import.meta.url))], { stdio: 'ignore' });
 try {
   regenerate();
   const rebuilt = JSON.parse(readFileSync(new URL('../src/frontend/data/imageManifest.json', import.meta.url), 'utf8'));

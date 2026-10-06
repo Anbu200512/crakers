@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, existsSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const slugify = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -42,8 +43,12 @@ const comboKeyFor = (base) => {
   return card ? card.id : null;
 };
 
-const imagesDir = decodeURIComponent(new URL('../public/images/', import.meta.url).pathname.replace(/^\//, ''));
-const bgDir = decodeURIComponent(new URL('../public/bg/', import.meta.url).pathname.replace(/^\//, ''));
+// fileURLToPath, not url.pathname: a raw pathname needs its leading slash
+// stripped to work as a Windows drive path ("E:/..."), and that same strip
+// turns a Linux path ("/vercel/path0/...") into a relative one that resolves
+// against the wrong directory and reports the folder as missing.
+const imagesDir = fileURLToPath(new URL('../public/images/', import.meta.url));
+const bgDir = fileURLToPath(new URL('../public/bg/', import.meta.url));
 
 function scanFolder(folder, keyFor = (base) => base) {
   const dir = join(imagesDir, folder);
@@ -78,7 +83,9 @@ const productKeyFor = (base) => {
   return knownSerials.has(serial) ? `excel-${serial}` : null;
 };
 
-const heroFolder = readdirSync(imagesDir).filter((entry) => /^hero\./.test(entry) && statSync(join(imagesDir, entry)).isFile());
+const heroFolder = existsSync(imagesDir)
+  ? readdirSync(imagesDir).filter((entry) => /^hero\./.test(entry) && statSync(join(imagesDir, entry)).isFile())
+  : [];
 const hero = heroFolder.length ? `/images/${heroFolder[0]}` : null;
 
 // Hero background: prefer public/bg/hero.*, fall back to public/images/bg/hero.*
@@ -149,5 +156,7 @@ const lines = [
   '',
 ];
 
-writeFileSync(join(imagesDir, 'CHECKLIST.txt'), lines.join('\n'), 'utf8');
+// Written only when the folder exists, so a checkout without the image drop-ins
+// still builds - the cards fall back to their placeholders.
+if (existsSync(imagesDir)) writeFileSync(join(imagesDir, 'CHECKLIST.txt'), lines.join('\n'), 'utf8');
 console.log(`src/frontend/data/imageManifest.json + CHECKLIST.txt written - ${total} image(s) found: products ${found('products')}/${productRows.length}, categories ${found('categories')}/${categories.length}, combos ${found('combos')}/${combos.length}, hero bg ${manifest.heroBg ? 'yes' : 'no'}`);
