@@ -57,9 +57,11 @@ export default async function handler(req, res) {
     });
     res.status(200).json({ url: blob.url });
   } catch (error) {
-    // Surfaced in the Vercel function logs; the caller only needs to know the
-    // upload did not happen so it can fall back to downloading the PDF.
-    console.error('[enquiry-pdf] upload failed:', error?.name || error?.message || error);
-    res.status(502).json({ error: 'the upload could not be stored' });
+    // Logged for the full message; the response carries the error class only -
+    // enough to tell a bad token from a store problem without exposing
+    // internals. The caller still reads any failure as "download instead".
+    const reason = error?.name || 'Error';
+    console.error('[enquiry-pdf] upload failed:', reason, error?.message || error);
+    res.status(502).json({ error: 'the upload could not be stored', reason });
   }
 }
