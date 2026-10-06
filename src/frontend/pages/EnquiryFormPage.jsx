@@ -23,6 +23,17 @@ const initialForm = {
 
 const preferredContactOptions = ['Phone call', 'WhatsApp message', 'Email reply', 'Any is fine'];
 
+// The five details the shop needs before it can reply: everything the PDF
+// prints in the top-left header, enforced here because the form runs with
+// noValidate (the browser's own bubbles would be skipped).
+const REQUIRED_FIELDS = [
+  ['name', 'name'],
+  ['mobile', 'mobile number'],
+  ['city', 'city'],
+  ['address', 'delivery address'],
+  ['pin', 'PIN code'],
+];
+
 export function EnquiryFormPage() {
   useDocumentTitle('Send your enquiry');
   const navigate = useNavigate();
@@ -39,6 +50,11 @@ export function EnquiryFormPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    const missing = REQUIRED_FIELDS.filter(([field]) => !String(form[field] || '').trim()).map(([, label]) => label);
+    if (missing.length) {
+      setError(`Please fill in: ${missing.join(', ')}.`);
+      return;
+    }
     setIsSubmitting(true);
     try {
       const enquiry = await submitEnquiry({ ...form, items, indicativeTotal, itemCount });

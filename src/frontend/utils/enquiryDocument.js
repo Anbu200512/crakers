@@ -4,12 +4,17 @@ import { contactLines, contactPhoneLines } from '../data/siteContent';
 /**
  * The enquiry sheet the customer sends on WhatsApp.
  *
- * A single A4 page built straight from the enquiry record: shop identity, the
- * customer's details, every cart line with its quantity and indicative amount,
- * and the totals with the "prices confirmed on reply" note. jsPDF draws with the
- * standard Helvetica face, which only covers Latin-1, so every string passes
- * through pdfSafe first - the rupee sign becomes "Rs" and typographic dashes
- * become plain ASCII, rather than landing in the PDF as garbage glyphs.
+ * A single A4 page built straight from the enquiry record: a two-column header
+ * with the customer's details on the top left and the shop - logo, name,
+ * address and phone lines - on the top right, then every cart line with its
+ * quantity and indicative amount, and the totals with the "prices confirmed on
+ * reply" note. jsPDF draws with the standard Helvetica face, which only covers
+ * Latin-1, so every string passes through pdfSafe first - the rupee sign
+ * becomes "Rs" and typographic dashes become plain ASCII, rather than landing
+ * in the PDF as garbage glyphs.
+ *
+ * The logo is optional (the third argument): without it - a failed fetch, or a
+ * build outside the browser - the header simply starts with the shop name.
  */
 
 const MARGIN = 14;
@@ -40,7 +45,7 @@ export const enquiryPdfFileName = (enquiry) => {
   return `Enquiry-${reference}-${day}.pdf`;
 };
 
-export const buildEnquiryPdf = (enquiry, contact = {}) => {
+export const buildEnquiryPdf = (enquiry, contact = {}, logo = null) => {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
   let y = MARGIN;
 
@@ -133,24 +138,77 @@ export const buildEnquiryPdf = (enquiry, contact = {}) => {
     y += 6.4;
   };
 
-  // ---------------------------------------------------------------- shop header
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(17);
-  doc.setTextColor(...INK);
-  doc.text(pdfSafe(contact.businessName || 'Anish Enterprises'), MARGIN, y + 3);
-  y += 9;
+  // ------------------------------------------------- header: customer | shop
+  // Top left holds the customer's details, top right the shop under its logo -
+  // the two sides of the enquiry, side by side before the table starts. Each
+  // column keeps its own cursor so neither side can push the other down.
+  const GUTTER = 8;
+  const columnWidth = (CONTENT_WIDTH - GUTTER) / 2;
 
-  const address = contactLines(contact);
-  if (address) {
-    writeWrapped(address, { size: 9, color: MUTED, leading: 4.4 });
+  let leftY = y;
+  const leftField = (label, value) => {
+    const text = String(value ?? '').trim();
+    if (!text) return;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
+    const labelText = `${label}: `;
+    const labelWidth = doc.getTextWidth(pdfSafe(labelText));
+    doc.text(labelText, MARGIN, leftY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...INK);
+    const lines = doc.splitTextToSize(pdfSafe(text), columnWidth - labelWidth);
+    lines.forEach((line, index) => {
+      if (index > 0) leftY += 4.6;
+      doc.text(line, index === 0 ? MARGIN + labelWidth : MARGIN, leftY);
+    });
+    leftY += 5.2;
+  };
+
+  leftField('Name', enquiry?.name);
+  leftField('Mobile', enquiry?.mobile);
+  leftField('City', enquiry?.city);
+  leftField('PIN', enquiry?.pin);
+  leftField('Address', enquiry?.address);
+  leftField('Email', enquiry?.email);
+  leftField('Occasion', enquiry?.occasion);
+  leftField('Reply via', enquiry?.preferredContact);
+
+  let rightY = y;
+  const LOGO_WIDTH = 24;
+  if (logo?.dataUrl) {
+    try {
+      const aspect = (Number(logo.height) || 0) / (Number(logo.width) || 1);
+      if (aspect > 0) {
+        doc.addImage(logo.dataUrl, 'PNG', RIGHT_EDGE - LOGO_WIDTH, rightY, LOGO_WIDTH, LOGO_WIDTH * aspect);
+        rightY += LOGO_WIDTH * aspect + 3.5;
+      }
+    } catch {
+      // A logo the decoder cannot read must never sink the enquiry itself.
+    }
   }
-  const phoneLine = contactPhoneLines(contact)
-    .map((line) => line.value)
-    .join('  ·  ');
-  const reach = [phoneLine, contact.email].filter(Boolean).join('  ·  ');
-  if (reach) writeWrapped(reach, { size: 9, color: MUTED, leading: 4.4 });
+  const rightLine = (text, { size, style = 'normal', color = MUTED, leading = 4.4 } = {}) => {
+    if (!String(text || '').trim()) return;
+    doc.setFont('helvetica', style);
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(pdfSafe(text), columnWidth);
+    lines.forEach((line, index) => {
+      if (index > 0) rightY += leading;
+      doc.text(line, RIGHT_EDGE, rightY, { align: 'right' });
+    });
+    rightY += leading;
+  };
 
-  y += 2;
+  rightLine(contact.businessName || 'Anish Enterprises', { size: 13, style: 'bold', color: INK, leading: 6 });
+  rightLine(contactLines(contact), { size: 8.5, leading: 4.2 });
+  rightLine(
+    [...contactPhoneLines(contact).map((line) => line.value), contact.email].filter(Boolean).join(' - '),
+    { size: 8.5, leading: 4.2 },
+  );
+
+  y = Math.max(leftY, rightY) + 2;
   rule(6);
 
   // ---------------------------------------------------------------- enquiry line
@@ -168,21 +226,13 @@ export const buildEnquiryPdf = (enquiry, contact = {}) => {
   y += 5;
   rule(7);
 
-  // ---------------------------------------------------------------- customer
-  section('Customer');
-  const left = MARGIN;
-  const right = MARGIN + CONTENT_WIDTH / 2 + 6;
-  const half = CONTENT_WIDTH / 2 - 6;
-
-  field('Name', enquiry?.name, left, half);
-  field('Mobile', enquiry?.mobile, right, half);
-  field('Email', enquiry?.email, left, half);
-  field('City', enquiry?.city, right, half);
-  field('PIN', enquiry?.pin, left, half);
-  field('Occasion', enquiry?.occasion, right, half);
-  field('Reply via', enquiry?.preferredContact, left, half);
-  if (String(enquiry?.address || '').trim()) field('Address', enquiry.address, left, CONTENT_WIDTH);
-  if (String(enquiry?.notes || '').trim()) field('Notes', enquiry.notes, left, CONTENT_WIDTH);
+  // ---------------------------------------------------------------- notes
+  // The header already carries the contact details; only free-form notes are
+  // still worth a full-width block before the table starts.
+  if (String(enquiry?.notes || '').trim()) {
+    y += 2;
+    field('Notes', enquiry.notes, MARGIN, CONTENT_WIDTH);
+  }
 
   // ---------------------------------------------------------------- items
   section('Items');

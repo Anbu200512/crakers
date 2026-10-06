@@ -134,6 +134,19 @@ check('the enquiry PDF is a real PDF file', () => {
   assert.match(enquiryPdfFileName(enquiry), /^Enquiry-ENQ-[A-Z0-9]+-\d{4}-\d{2}-\d{2}\.pdf$/);
 });
 
+check('the PDF header accepts the shop logo', () => {
+  const onePixelPng =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const doc = buildEnquiryPdf(enquiry, siteContent.siteContentDefaults.contact, {
+    dataUrl: onePixelPng,
+    width: 1,
+    height: 1,
+  });
+  const bytes = Buffer.from(doc.output('arraybuffer'));
+  assert.equal(bytes.subarray(0, 4).toString('latin1'), '%PDF');
+  assert.ok(bytes.length > 4000, `expected a full page with the logo, got ${bytes.length} bytes`);
+});
+
 // With no server reachable the upload fails fast, so the chat still opens on
 // the published number and the PDF downloads beside it to attach by hand.
 fetchCalls.length = 0;

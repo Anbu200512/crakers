@@ -89,6 +89,53 @@ const openChat = (href) => {
 };
 
 /**
+ * The shop logo for the PDF header, fetched once per session and downscaled -
+ * the nav logo is 1.25 MB, which would travel with every enquiry, while the
+ * header draws it at 24 mm. Returns { dataUrl, width, height } or null; null
+ * (no browser, failed fetch, no canvas) just leaves the PDF without its logo.
+ */
+let logoPromise = null;
+const enquiryLogo = () => {
+  // No location means no browser (smoke tests, SSR) - never fetch there.
+  if (typeof location === 'undefined') return Promise.resolve(null);
+  if (!logoPromise) {
+    logoPromise = (async () => {
+      try {
+        const response = await fetch('/images/logo/logo.png');
+        if (!response.ok) return null;
+        const file = await response.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const image = new Image();
+        const loaded = await new Promise((resolve) => {
+          image.onload = () => resolve(true);
+          image.onerror = () => resolve(false);
+          image.src = dataUrl;
+        });
+        if (!loaded || !image.naturalWidth) return null;
+
+        const MAX_WIDTH = 520;
+        const scale = Math.min(1, MAX_WIDTH / image.naturalWidth);
+        if (scale === 1) return { dataUrl, width: image.naturalWidth, height: image.naturalHeight };
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(image.naturalWidth * scale);
+        canvas.height = Math.round(image.naturalHeight * scale);
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height };
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return logoPromise;
+};
+
+/**
  * Uploads the PDF and returns its public URL, or null when the server is not
  * reachable (local dev without `vercel dev`, upload blocked, Blob store not
  * linked yet). The caller treats null as "fall back to downloading the file".
@@ -136,7 +183,8 @@ export const sendEnquiryToWhatsApp = async (enquiry, siteContent = {}) => {
 
   let blob = null;
   try {
-    blob = buildEnquiryPdf(enquiry, contact).output('blob');
+    const logo = await enquiryLogo();
+    blob = buildEnquiryPdf(enquiry, contact, logo).output('blob');
   } catch {
     // The prefilled message already carries every detail, so the chat below
     // still sends a complete enquiry even without the document.

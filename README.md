@@ -60,7 +60,8 @@ fills the form and presses **Send enquiry**. `src/frontend/services/whatsapp.js`
 then runs one sequence on every device, phone and computer alike:
 
 1. **Build the PDF.** `src/frontend/utils/enquiryDocument.js` lays the enquiry
-   out as an A4 document (jsPDF, Helvetica).
+   out as an A4 document (jsPDF, Helvetica): the customer's details on the top
+   left, the shop - logo, name, address and phone lines - on the top right.
 2. **Upload it once.** The PDF is POSTed to `/api/enquiry-pdf`, stored in
    Vercel Blob, and the chat opens (`wa.me/916374114513`) with `PDF: <url>`
    inside the prefilled message. The button reads "Opening WhatsApp..." during
