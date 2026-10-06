@@ -37,6 +37,17 @@ export default async function handler(req, res) {
     return;
   }
 
+  // The token appears only once a Blob store is connected to this project, and
+  // functions read env vars at deploy time - a missing value means the store is
+  // not linked or the project was not redeployed afterwards. Reported as its
+  // own status so a dashboard step is never mistaken for a code bug.
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    res.status(503).json({
+      error: 'BLOB_READ_WRITE_TOKEN is not set - connect a Blob store to this project and redeploy',
+    });
+    return;
+  }
+
   try {
     const safeName = name.replace(/[^\w.-]/g, '').slice(-80) || `enquiry-${Date.now()}.pdf`;
     const blob = await put(`enquiries/${Date.now()}-${safeName}`, buffer, {
@@ -45,9 +56,10 @@ export default async function handler(req, res) {
       addRandomSuffix: true,
     });
     res.status(200).json({ url: blob.url });
-  } catch {
-    // Most often a missing BLOB_READ_WRITE_TOKEN - the store has not been
-    // linked yet. The caller reads the failure and downloads the PDF instead.
+  } catch (error) {
+    // Surfaced in the Vercel function logs; the caller only needs to know the
+    // upload did not happen so it can fall back to downloading the PDF.
+    console.error('[enquiry-pdf] upload failed:', error?.name || error?.message || error);
     res.status(502).json({ error: 'the upload could not be stored' });
   }
 }
