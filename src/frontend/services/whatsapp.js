@@ -4,14 +4,12 @@ import { buildEnquiryPdf, enquiryPdfFileName, pdfMoney } from '../utils/enquiryD
 /**
  * Handing an enquiry to WhatsApp.
  *
- * A browser cannot attach a file to a wa.me link - the URL takes text only - so
- * the PDF reaches the shop in one of three ways, in this order:
- *   1. Phone: the system share sheet carries the file, so the PDF lands in the
- *      chat the customer picks.
- *   2. Computer: the PDF is uploaded once (api/enquiry-pdf.js, Vercel Blob) and
- *      the chat opens with its link in the message - nothing to attach.
- *   3. No server reachable: the chat opens anyway and the PDF downloads beside
- *      it for a paperclip attach.
+ * One flow on every device: the PDF is built, uploaded once
+ * (api/enquiry-pdf.js, Vercel Blob), and the shop's chat opens with the link
+ * riding in the message. A wa.me URL takes text only, so the link is how the
+ * document reaches the chat - phones and computers take the same path, always
+ * landing on the shop's number. No server reachable: the chat still opens and
+ * the PDF downloads beside it for a paperclip attach.
  */
 
 const MAX_TEXT = 1800;
@@ -124,36 +122,12 @@ export const uploadEnquiryPdf = async (blob, fileName) => {
 };
 
 /**
- * Hands the PDF to the phone's share sheet, which is the only way a file can
- * reach WhatsApp from a web page. Resolves true when the sheet accepted it; a
- * cancel, a failure or a browser without file sharing all resolve false so the
- * caller can fall back to the direct chat rather than dead-ending.
- */
-const shareEnquiryPdf = async (enquiry, blob, fileName, message) => {
-  const file = typeof File === 'function' ? new File([blob], fileName, { type: 'application/pdf' }) : null;
-  const supported = Boolean(
-    file &&
-      typeof navigator !== 'undefined' &&
-      typeof navigator.share === 'function' &&
-      typeof navigator.canShare === 'function' &&
-      navigator.canShare({ files: [file] }),
-  );
-  if (!supported) return false;
-  try {
-    await navigator.share({ files: [file], title: `Enquiry ${enquiry?.reference || ''}`, text: message });
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Sends the enquiry: the phone's share sheet first, then the uploaded PDF as a
- * link in the message, and as a last resort the PDF downloaded beside the chat.
+ * Sends the enquiry: the PDF uploads once, then the shop's chat opens with its
+ * link in the message - the same sequence on a phone and on a computer.
  *
- * Returns 'shared' (the sheet took the PDF), 'linked' (chat open with the PDF
- * link in the message), 'opened' (chat open, PDF downloaded), 'downloaded'
- * (PDF saved, no WhatsApp link configured) or 'failed'.
+ * Returns 'linked' (chat open with the PDF link in the message), 'opened'
+ * (chat open, PDF downloaded beside it), 'downloaded' (PDF saved, no WhatsApp
+ * link configured) or 'failed'.
  */
 export const sendEnquiryToWhatsApp = async (enquiry, siteContent = {}) => {
   const contact = siteContent.contact || {};
@@ -168,11 +142,7 @@ export const sendEnquiryToWhatsApp = async (enquiry, siteContent = {}) => {
     // still sends a complete enquiry even without the document.
   }
 
-  // 1. A phone hands the file straight to WhatsApp through the share sheet.
-  if (blob && (await shareEnquiryPdf(enquiry, blob, fileName, message))) return 'shared';
-
-  // 2. Otherwise the PDF goes up once and the chat opens with its link in the
-  //    message - the desktop path, and the fallback when the sheet is refused.
+  // 1. The PDF goes up once and the chat opens with its link in the message.
   const pdfUrl = blob ? await uploadEnquiryPdf(blob, fileName) : null;
   const chatHref = whatsappChatHref(
     socialLinkFor('whatsapp', siteContent.social?.whatsapp),
@@ -180,7 +150,7 @@ export const sendEnquiryToWhatsApp = async (enquiry, siteContent = {}) => {
   );
   const opened = chatHref ? openChat(chatHref) : false;
 
-  // 3. No server reachable: the PDF downloads beside the open chat so the
+  // 2. No server reachable: the PDF downloads beside the open chat so the
   //    customer can attach it with the paperclip instead.
   let downloaded = false;
   if (blob && !pdfUrl) {

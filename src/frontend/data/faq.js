@@ -37,13 +37,13 @@ export const policyPages = {
   privacy: {
     title: 'Privacy',
     eyebrow: 'Your information',
-    intro: 'This storefront does not run a server. Anything you type stays in your own browser until you send the enquiry yourself, which hands it to us on WhatsApp.',
+    intro: 'Almost everything on this storefront lives in your own browser. Nothing you type is sent anywhere until you send the enquiry yourself, which opens WhatsApp with your message and a PDF of your selection.',
     updated: 'Applicable to this frontend preview',
     sections: [
       { heading: 'What we ask for', body: 'The enquiry form asks for a name, mobile number, email address, delivery address and any message you want to add. Only the fields you fill in are used.' },
       { heading: 'Where it is stored', body: 'Your saved shortlist and each enquiry you prepare are stored in your browser local storage. Clearing your browser data removes them.' },
       { heading: 'No tracking, no accounts', body: 'There are no analytics scripts, advertising pixels, cookies or customer logins connected to this site.' },
-      { heading: 'No server-side copy', body: 'This storefront runs entirely in your browser. When you send an enquiry it goes straight to us on WhatsApp as a message plus a PDF of your selection; nothing is held on a server of ours.' },
+      { heading: 'Nothing kept on file', body: 'When you send an enquiry it goes to us on WhatsApp as a message plus a PDF of your selection. The PDF travels as a link through temporary file storage - there is no database of orders, customers or enquiries behind this site, and you can ask us to delete the PDF at any time.' },
       { heading: 'What you can ask for', body: 'Ask us to remove details you have shared with us and we will clear them from our working records.' },
     ],
   },

@@ -6,18 +6,16 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { sendEnquiryToWhatsApp } from '../services/whatsapp';
 import { formatCurrency } from '../utils/format';
 
-const wasSent = (state) => state === 'shared' || state === 'linked' || state === 'opened' || state === 'downloaded';
+const wasSent = (state) => state === 'linked' || state === 'opened' || state === 'downloaded';
 
 const sendHints = {
-  shared: 'The share sheet sent the PDF to WhatsApp - it is in the chat with your message.',
   linked: "The shop's WhatsApp chat is open with your message, and a link to the PDF is in it too.",
   opened: "The shop's WhatsApp chat is open with your message, and the PDF has downloaded for attaching.",
   downloaded: 'The PDF has downloaded.',
   error: 'We could not open the chat or prepare the PDF. Try again, or use the contact page to reach us directly.',
 };
 
-const defaultHint =
-  'On a phone the share sheet carries the PDF into WhatsApp; on a computer the chat opens with your message and a link to the PDF.';
+const defaultHint = "The shop's WhatsApp chat opens with your message and a link to the PDF, ready to send.";
 
 export function EnquirySuccessPage() {
   useDocumentTitle('Enquiry prepared');

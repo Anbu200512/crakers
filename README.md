@@ -57,18 +57,21 @@ serves Vite *and* the `api/` function).
 
 The customer adds products to the cart, opens **Send this cart as an enquiry**,
 fills the form and presses **Send enquiry**. `src/frontend/services/whatsapp.js`
-then tries three routes, in order:
+then runs one sequence on every device, phone and computer alike:
 
-1. **Phone - share sheet.** `navigator.share({ files })` hands the PDF straight
-   to WhatsApp; the customer taps the shop and the file lands in that chat.
-2. **Computer - PDF as a link.** The PDF is POSTed to `/api/enquiry-pdf`,
-   stored in Vercel Blob, and the chat opens (`wa.me/916374114513`) with
-   `PDF: <url>` inside the prefilled message.
+1. **Build the PDF.** `src/frontend/utils/enquiryDocument.js` lays the enquiry
+   out as an A4 document (jsPDF, Helvetica).
+2. **Upload it once.** The PDF is POSTed to `/api/enquiry-pdf`, stored in
+   Vercel Blob, and the chat opens (`wa.me/916374114513`) with `PDF: <url>`
+   inside the prefilled message. The button reads "Opening WhatsApp..." during
+   the wait, so the click cannot double-fire.
 3. **No server reachable.** The chat still opens with the full enquiry as the
    message, and the PDF downloads beside it for a paperclip attach.
 
 A wa.me link can carry text only - a browser can never attach a file to a
-specific chat on its own - which is why routes 1 and 2 exist.
+specific chat on its own - which is why the PDF travels as a link. Opening the
+chat on the shop's number directly is also why there is no "pick a contact"
+step.
 
 The enquiry itself is also saved in `localStorage`
 (`spark-shine-enquiries`) so the reference stays available on the success
@@ -85,8 +88,8 @@ The browser is the source of truth; clearing site data resets everything.
 - **Sent enquiries** - `spark-shine-enquiries` (reference + details, local copy).
 - **Site content** - announcement, contact, social links, highlights, FAQs
   (`spark-shine-site-content` and friends).
-- **Uploaded PDFs** - Vercel Blob, only when route 2 above runs; each file gets
-  a random-suffixed public URL.
+- **Uploaded PDFs** - Vercel Blob, only when step 2 above succeeds; each file
+  gets a random-suffixed public URL.
 
 ---
 
@@ -140,9 +143,8 @@ crackers/
 |---|---|
 | `POST /api/enquiry-pdf` | body `{ name, data }` (base64 PDF) -> `{ url }`. PDFs only, 3 MB cap, magic-byte checked. |
 
-It exists purely so the desktop flow can put a link to the PDF into the
-WhatsApp message. Without it configured, route 3 above takes over and nothing
-breaks.
+It exists purely so the flow can put a link to the PDF into the WhatsApp
+message. Without it configured, step 3 above takes over and nothing breaks.
 
 ---
 
@@ -153,8 +155,8 @@ breaks.
 2. In the project dashboard: **Storage -> Create -> Blob**, then attach the
    store to the project so `BLOB_READ_WRITE_TOKEN` is set as an environment
    variable.
-3. Redeploy. Route 2 (PDF as a link) now works; without step 2 the site still
-   works and always falls back to route 3.
+3. Redeploy - step 2 (PDF as a link) now works everywhere; without step 2 the
+   site still works and always falls back to step 3.
 
 Notes:
 

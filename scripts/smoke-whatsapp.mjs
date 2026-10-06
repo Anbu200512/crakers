@@ -153,9 +153,9 @@ try {
   results.push(`FAIL  without a server the chat opens and the PDF downloads: ${error.message}`);
 }
 
-// The phone path: when the browser offers a share sheet that accepts files, the
-// PDF goes through it - the only way a file can reach WhatsApp from a web page -
-// and nothing opens behind it.
+// The unified flow: even a browser that offers a share sheet takes the same
+// path as a computer - no sheet, the chat on the shop's number opens with the
+// message (and the PDF link when the upload succeeded).
 const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
 const sharedCalls = [];
 Object.defineProperty(globalThis, 'navigator', {
@@ -168,41 +168,14 @@ Object.defineProperty(globalThis, 'navigator', {
 try {
   clickedAnchors.length = 0;
   const outcome = await sendEnquiryToWhatsApp(enquiry, siteContent.mergeSiteContent(null));
-  assert.equal(outcome, 'shared');
-  assert.equal(sharedCalls.length, 1, 'the share sheet was called once');
-  assert.equal(sharedCalls[0].files.length, 1, 'the PDF rode along as the only file');
-  assert.match(sharedCalls[0].files[0].name, /^Enquiry-ENQ-.+\.pdf$/);
-  assert.equal(sharedCalls[0].files[0].type, 'application/pdf');
-  assert.match(sharedCalls[0].text, /Name: Ravi Kumar/);
-  assert.equal(clickedAnchors.length, 0, 'no chat or download is triggered behind the sheet');
-  results.push('PASS  the phone share sheet receives the PDF and the message');
-} catch (error) {
-  results.push(`FAIL  the phone share sheet receives the PDF and the message: ${error.message}`);
-}
-
-// A cancelled share sheet must not dead-end: the direct chat on the published
-// number opens anyway, with the PDF downloaded beside it.
-Object.defineProperty(globalThis, 'navigator', {
-  configurable: true,
-  value: {
-    share: async () => {
-      const cancelled = new Error('user closed the sheet');
-      cancelled.name = 'AbortError';
-      throw cancelled;
-    },
-    canShare: () => true,
-  },
-});
-try {
-  clickedAnchors.length = 0;
-  const outcome = await sendEnquiryToWhatsApp(enquiry, siteContent.mergeSiteContent(null));
-  assert.equal(outcome, 'opened');
-  assert.equal(clickedAnchors[0]?.target, '_blank', 'the direct chat still opens');
+  assert.equal(outcome, 'opened', 'the chat still opens when no server is reachable');
+  assert.equal(sharedCalls.length, 0, 'the share sheet is never called, on any device');
+  assert.equal(clickedAnchors[0]?.target, '_blank', 'the chat opens');
   assert.ok(clickedAnchors[0].href.startsWith('https://wa.me/916374114513?text='), clickedAnchors[0].href);
-  assert.ok(clickedAnchors.some((anchor) => anchor.download), 'the PDF still downloads for a manual attach');
-  results.push('PASS  a cancelled share sheet falls back to the direct chat');
+  assert.ok(clickedAnchors.some((anchor) => anchor.download), 'the PDF downloads for a manual attach');
+  results.push('PASS  a phone with a share sheet takes the same link flow');
 } catch (error) {
-  results.push(`FAIL  a cancelled share sheet falls back to the direct chat: ${error.message}`);
+  results.push(`FAIL  a phone with a share sheet takes the same link flow: ${error.message}`);
 } finally {
   if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
   else delete globalThis.navigator;
