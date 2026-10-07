@@ -6,8 +6,10 @@ export const siteContentStorageKey = 'spark-shine-site-content';
 // are preserved. Version 4 adds the second published phone number, so a copy
 // saved before it exists cannot keep serving the single old line. Version 6
 // republishes the WhatsApp line, so a copy saved under version 5 that still
-// holds the previous number cannot keep sending chats to it.
-export const siteContentVersion = 6;
+// holds the previous number cannot keep sending chats to it. Version 7
+// republishes the map links, so a copy saved under version 6 cannot keep
+// framing the previous location.
+export const siteContentVersion = 7;
 
 // Identity fields the shop owns. These are re-seeded on a version bump even if
 // an older stored copy holds blank or placeholder values. The published social
@@ -34,11 +36,11 @@ export const siteContentDefaults = {
     city: '',
     state: '',
     businessHours: '',
-    mapUrl: 'https://maps.app.goo.gl/n8QT6EUq98P87LnV9?g_st=ac',
+    mapUrl: 'https://maps.app.goo.gl/DJ2sVkhZzaUttYn8A?g_st=aw',
     // Google blocks framing maps.app.goo.gl share links, so the contact page
     // embeds this pre-resolved coordinates URL instead. Bump detailsVersion when
     // the shop location changes so both links stay in step.
-    mapEmbedUrl: 'https://www.google.com/maps?q=9.446091,77.8052485&z=16&output=embed',
+    mapEmbedUrl: 'https://www.google.com/maps?q=9.4461303,77.8055159&z=16&output=embed',
   },
   // The shop's published brand accounts, stored exactly as supplied. These are the
   // links the owner provided, including the Instagram stkn and YouTube si tokens.
