@@ -4,10 +4,10 @@ export const siteContentStorageKey = 'spark-shine-site-content';
 // before the current version get their identity fields re-seeded from the
 // defaults below, while edits made through the admin area after the bump
 // are preserved. Version 4 adds the second published phone number, so a copy
-// saved before it exists cannot keep serving the single old line. Version 5
-// republishes the WhatsApp line, so a copy holding the previous number cannot
-// keep sending chats to it.
-export const siteContentVersion = 5;
+// saved before it exists cannot keep serving the single old line. Version 6
+// republishes the WhatsApp line, so a copy saved under version 5 that still
+// holds the previous number cannot keep sending chats to it.
+export const siteContentVersion = 6;
 
 // Identity fields the shop owns. These are re-seeded on a version bump even if
 // an older stored copy holds blank or placeholder values. The published social

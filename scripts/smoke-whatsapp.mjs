@@ -96,8 +96,8 @@ check('the published WhatsApp line is the shop number', () => {
 
 check('a stored copy holding the old WhatsApp number is re-seeded', () => {
   const stale = siteContent.mergeSiteContent({
-    detailsVersion: 4,
-    social: { whatsapp: 'https://wa.me/916374114513' },
+    detailsVersion: siteContent.siteContentVersion - 1,
+    social: { whatsapp: 'https://wa.me/919000000000' },
   });
   assert.equal(stale.social.whatsapp, 'https://wa.me/919442521144');
 });

@@ -119,10 +119,9 @@ export const buildEnquiryPdf = (enquiry, contact = {}, logo = null) => {
   const columns = [
     { label: '#', x: MARGIN, width: 8, align: 'left' },
     { label: 'Item', x: MARGIN + 8, width: 84, align: 'left' },
-    { label: 'Pack', x: MARGIN + 94, width: 30, align: 'left' },
+    { label: 'Rate', x: MARGIN + 94, width: 30, align: 'right' },
     { label: 'Qty', x: MARGIN + 132, width: 14, align: 'right' },
-    { label: 'Rate', x: MARGIN + 146, width: 24, align: 'right' },
-    { label: 'Amount', x: MARGIN + 170, width: 12, align: 'right' },
+    { label: 'Amount', x: MARGIN + 156, width: 26, align: 'right' },
   ];
 
   const tableHeader = () => {
@@ -260,13 +259,12 @@ export const buildEnquiryPdf = (enquiry, contact = {}, logo = null) => {
     nameLines.forEach((line, lineIndex) => doc.text(line, columns[1].x, baseline + lineIndex * 4.4));
 
     doc.setTextColor(...MUTED);
-    doc.text(pdfSafe(item.packSize || ''), columns[2].x, baseline);
+    doc.text(pdfMoney(item.customerPrice), columns[2].x + columns[2].width, baseline, { align: 'right' });
     doc.text(String(item.quantity || 0), columns[3].x + columns[3].width, baseline, { align: 'right' });
-    doc.text(pdfMoney(item.customerPrice), columns[4].x + columns[4].width, baseline, { align: 'right' });
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...INK);
-    doc.text(pdfMoney((Number(item.customerPrice) || 0) * (Number(item.quantity) || 0)), columns[5].x + columns[5].width, baseline, { align: 'right' });
+    doc.text(pdfMoney((Number(item.customerPrice) || 0) * (Number(item.quantity) || 0)), columns[4].x + columns[4].width, baseline, { align: 'right' });
 
     y += rowHeight;
     doc.setDrawColor(...RULE);
