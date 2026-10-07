@@ -48,7 +48,7 @@ export const siteContentDefaults = {
     instagram: 'https://www.instagram.com/anishenterprisescrackers?stkn=MXV6c29xMnoza3NiYw==',
     facebook: 'https://www.facebook.com/share/1AjwdKkQQx/',
     linkedin: '',
-    whatsapp: 'https://wa.me/916374114513',
+    whatsapp: 'https://wa.me/919442521144',
     youtube: 'https://youtube.com/@anishenterprisescrackers?si=tBZtvWu7Bwgg_ZyV',
   },
   hero: {

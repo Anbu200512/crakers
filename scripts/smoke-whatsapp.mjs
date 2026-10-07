@@ -90,16 +90,16 @@ const chatBase = siteContent.socialLinkFor('whatsapp', siteContent.siteContentDe
 const chatHref = whatsappChatHref(chatBase, enquiryMessageText(enquiry));
 
 check('the published WhatsApp line is the shop number', () => {
-  assert.equal(siteContent.siteContentDefaults.social.whatsapp, 'https://wa.me/916374114513');
-  assert.equal(chatBase, 'https://wa.me/916374114513');
+  assert.equal(siteContent.siteContentDefaults.social.whatsapp, 'https://wa.me/919442521144');
+  assert.equal(chatBase, 'https://wa.me/919442521144');
 });
 
 check('a stored copy holding the old WhatsApp number is re-seeded', () => {
   const stale = siteContent.mergeSiteContent({
     detailsVersion: 4,
-    social: { whatsapp: 'https://wa.me/919442521144' },
+    social: { whatsapp: 'https://wa.me/916374114513' },
   });
-  assert.equal(stale.social.whatsapp, 'https://wa.me/916374114513');
+  assert.equal(stale.social.whatsapp, 'https://wa.me/919442521144');
 });
 
 check('the submitted enquiry is recorded locally with a reference', () => {
@@ -121,7 +121,7 @@ check('the chat message lists the customer, the items and the total', () => {
 });
 
 check('the chat link opens the shop WhatsApp with that message', () => {
-  assert.ok(chatHref.startsWith('https://wa.me/916374114513?text='), chatHref);
+  assert.ok(chatHref.startsWith('https://wa.me/919442521144?text='), chatHref);
   assert.match(decodeURIComponent(chatHref), /Name: Ravi Kumar/);
 });
 
@@ -156,7 +156,7 @@ try {
   assert.equal(outcome, 'opened');
   assert.equal(fetchCalls[0]?.url, '/api/enquiry-pdf', 'the upload was attempted first');
   assert.equal(clickedAnchors[0]?.target, '_blank', 'the chat opens');
-  assert.ok(clickedAnchors[0].href.startsWith('https://wa.me/916374114513?text='), clickedAnchors[0].href);
+  assert.ok(clickedAnchors[0].href.startsWith('https://wa.me/919442521144?text='), clickedAnchors[0].href);
   assert.match(decodeURIComponent(clickedAnchors[0].href), /Name: Ravi Kumar/);
   const download = clickedAnchors.find((anchor) => anchor.download);
   assert.ok(download, 'the PDF was downloaded to attach');
@@ -184,7 +184,7 @@ try {
   assert.equal(outcome, 'opened', 'the chat still opens when no server is reachable');
   assert.equal(sharedCalls.length, 0, 'the share sheet is never called, on any device');
   assert.equal(clickedAnchors[0]?.target, '_blank', 'the chat opens');
-  assert.ok(clickedAnchors[0].href.startsWith('https://wa.me/916374114513?text='), clickedAnchors[0].href);
+  assert.ok(clickedAnchors[0].href.startsWith('https://wa.me/919442521144?text='), clickedAnchors[0].href);
   assert.ok(clickedAnchors.some((anchor) => anchor.download), 'the PDF downloads for a manual attach');
   results.push('PASS  a phone with a share sheet takes the same link flow');
 } catch (error) {

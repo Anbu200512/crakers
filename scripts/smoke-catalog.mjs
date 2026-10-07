@@ -189,12 +189,13 @@ check('the footer social icons use the exact published links', () => {
 
 check('the WhatsApp chat number and the website contact number are kept apart', () => {
   const { contact, social } = siteContent.siteContentDefaults;
-  // Three different numbers on purpose. Swapping them would send customers to the wrong line.
-  assert.equal(siteContent.socialLinkFor('whatsapp', social.whatsapp), 'https://wa.me/916374114513');
+  // The chat button runs on the second published line; the website contact
+  // number stays the other one, so swapping them would send customers to the wrong line.
+  assert.equal(siteContent.socialLinkFor('whatsapp', social.whatsapp), 'https://wa.me/919442521144');
   assert.equal(contact.phone, '9488821144');
   assert.notEqual(contact.phone, '9442521144');
-  assert.ok(!social.whatsapp.includes(contact.phone), 'the chat line is not either published contact line');
-  assert.ok(!social.whatsapp.includes(contact.phoneAlt), 'the chat line is not either published contact line');
+  assert.ok(!social.whatsapp.includes(contact.phone), 'the chat line is not the main contact line');
+  assert.ok(social.whatsapp.includes(contact.phoneAlt), 'the chat line is the second published line');
 });
 
 check('both published phone numbers are listed, the new one first', () => {

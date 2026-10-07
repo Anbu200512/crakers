@@ -63,7 +63,7 @@ then runs one sequence on every device, phone and computer alike:
    out as an A4 document (jsPDF, Helvetica): the customer's details on the top
    left, the shop - logo, name, address and phone lines - on the top right.
 2. **Upload it once.** The PDF is POSTed to `/api/enquiry-pdf`, stored in
-   Vercel Blob, and the chat opens (`wa.me/916374114513`) with `PDF: <url>`
+   Vercel Blob, and the chat opens (`wa.me/919442521144`) with `PDF: <url>`
    inside the prefilled message. The button reads "Opening WhatsApp..." during
    the wait, so the click cannot double-fire.
 3. **No server reachable.** The chat still opens with the full enquiry as the
